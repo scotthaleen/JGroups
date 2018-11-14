@@ -1,7 +1,10 @@
 package org.jgroups.tests.byteman;
 
+import org.jboss.byteman.contrib.bmunit.BMNGRunner;
+import org.jboss.byteman.contrib.bmunit.BMScript;
 import org.jgroups.Global;
 import org.jgroups.JChannel;
+import org.jgroups.View;
 import org.jgroups.protocols.*;
 import org.jgroups.protocols.pbcast.GMS;
 import org.jgroups.protocols.pbcast.NAKACK2;
@@ -22,8 +25,8 @@ import java.util.stream.Stream;
  * @author Radoslav Husar
  * @author Bela Ban
  */
-@Test(groups = Global.FUNCTIONAL, singleThreaded = true)
-public class LeaveTest {
+@Test(groups=Global.BYTEMAN,singleThreaded=true)
+public class LeaveTest extends BMNGRunner {
 
     protected static final int NUM = 4;
     protected static final int NUM_LEAVERS = 2;
@@ -84,6 +87,35 @@ public class LeaveTest {
           .allMatch(ch -> ch.getView().size() == 3 && ch.getView().getCoord().equals(channels[0].getAddress()));
     }
 
+    /** The first 3 coords leave, one after the other */
+    public void testSequentialLeavesOfCoordinators() {
+        Stream.of(0,1,2).map(i -> channels[i]).forEach(Util::close);
+        View v=channels[3].getView();
+        System.out.println("v = " + v);
+        assert v.size() == 1 && v.getCoord().equals(channels[3].getAddress());
+        Stream.of(0,1,2).map(i->channels[i]).allMatch(ch -> ch.getView() == null);
+    }
+
+    /** The coord and next-coord leave concurrently (next leaves first) */
+    //@BMScript(dir="scripts/LeaveTest", value="testNextLeavesFirst")
+    public void testLeaveOfNextAndCoord() throws Exception {
+        testConcurrentLeaves();
+        Stream.of(0,1).map(i->channels[i]).allMatch(ch -> ch.getView() == null);
+        Stream.of(2,3).map(i->channels[i])
+          .allMatch(ch -> ch.getView().size() == 2 && ch.getView().getCoord().equals(channels[2].getAddress()));
+    }
+
+    /** The coord and next-coord leave concurrently (coord leaves first) */
+    @BMScript(dir="scripts/LeaveTest", value="testCoordLeavesFirst")
+    public void testLeaveOfCoordAndNext() throws Exception {
+        testConcurrentLeaves();
+        Stream.of(0,1).map(i->channels[i]).allMatch(ch -> ch.getView() == null);
+        Stream.of(2,3).map(i->channels[i])
+          .allMatch(ch -> ch.getView().size() == 2 && ch.getView().getCoord().equals(channels[2].getAddress()));
+    }
+
+
+    /** The first NUM_LEAVERS leave concurrently */
     public void testConcurrentLeaves() throws Exception {
         System.out.println(Util.printViews(channels));
         System.out.println("\n");

@@ -1,0 +1,8 @@
+
+## Tests A and B leaving concurrently in a cluster {A,B,C,D}
+## A (coord) leaves just before B: new view must be {C,D}, with C being the coord
+## https://issues.jboss.org/browse/JGRP-2293
+
+RULE
+
+ENDRULE
