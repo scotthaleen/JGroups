@@ -647,14 +647,14 @@ public class UtilTest {
         // test heap based ByteBuffer:
         String hello="hello";
         byte[] buffer=hello.getBytes();
-        ByteBuffer buf=ByteBuffer.allocate(50).putInt(322649).put(buffer).flip();
+        ByteBuffer buf=(ByteBuffer)ByteBuffer.allocate(50).putInt(322649).put(buffer).flip();
         buf.getInt();
         MyNioReceiver receiver=new MyNioReceiver();
         receiver.receive(null, buf);
         assert receiver.name.equals(hello);
 
         // test direct ByteBuffer:
-        buf=ByteBuffer.allocateDirect(50).putInt(322649).put(buffer).flip();
+        buf=(ByteBuffer)ByteBuffer.allocateDirect(50).putInt(322649).put(buffer).flip();
         buf.getInt();
         receiver.receive(null, buf);
         assert receiver.name.equals(hello);
