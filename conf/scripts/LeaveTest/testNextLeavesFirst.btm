@@ -3,11 +3,33 @@
 ## B leaves just before A (coord): new view must be {C,D}, with C being the coord
 ## https://issues.jboss.org/browse/JGRP-2293
 
-RULE bla
-HELPER org.jgroups.tests.helpers.LeaveTestHelper
-CLASS org.jgroups.protocols.pbcast.GMS
-METHOD process
+
+## The rendezvous used to sync coord and participant adding their LEAVE-REQs into the view handler
+RULE CreateRendezvous
+CLASS LeaveTest
+METHOD setup()
 AT ENTRY
 IF TRUE
-    DO processRequests($1);
+   DO System.out.println("--> Creating rendezvous");
+      createRendezvous("rv", 2, false);
+ENDRULE
+
+## Delete the rendezvous when the test is done
+RULE DeleteRendezvous
+CLASS LeaveTest
+METHOD destroy()
+AT EXIT
+IF TRUE
+   DO System.out.println("--> Deleting rendezvous");
+      deleteRendezvous("rv", 2);
+ENDRULE
+
+RULE Print contents of requests on ViewHandler.add()
+HELPER org.jgroups.tests.helpers.LeaveTestHelper
+CLASS org.jgroups.protocols.pbcast.ViewHandler
+METHOD add(Object)
+BIND req:org.jgroups.protocols.pbcast.GmsImpl$Request=$1;
+AT ENTRY
+IF req.getType() == Request.LEAVE
+    DO System.out.println("*** " +$0.gms.getLocalAddress()+": adding request " + req + ", class: " + req.getClass());
 ENDRULE
