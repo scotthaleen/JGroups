@@ -97,7 +97,7 @@ public class LeaveTest extends BMNGRunner {
     }
 
     /** The coord and next-coord leave concurrently (next leaves first) */
-    //@BMScript(dir="scripts/LeaveTest", value="testNextLeavesFirst")
+    @BMScript(dir="scripts/LeaveTest", value="testNextLeavesFirst")
     public void testLeaveOfNextAndCoord() throws Exception {
         testConcurrentLeaves();
         Stream.of(0,1).map(i->channels[i]).allMatch(ch -> ch.getView() == null);

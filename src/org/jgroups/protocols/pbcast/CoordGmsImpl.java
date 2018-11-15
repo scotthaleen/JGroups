@@ -48,7 +48,7 @@ public class CoordGmsImpl extends ServerGmsImpl {
             if(log.isErrorEnabled()) log.error(Util.getMessage("MemberSAddressIsNull"));
             return;
         }
-        leaving=true;
+        gms.setLeaving(true);
         Address next_coord=gms.determineNextCoordinator();
         if(next_coord != null)
             sendLeaveReqTo(next_coord);
@@ -218,7 +218,7 @@ public class CoordGmsImpl extends ServerGmsImpl {
      *                 be set by GMS
      */
     public void handleViewChange(View new_view, Digest digest) {
-        if(leaving && !new_view.containsMember(gms.local_addr))
+        if(gms.isLeaving() && !new_view.containsMember(gms.local_addr))
             return;
         gms.installView(new_view, digest);
     }

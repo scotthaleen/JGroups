@@ -3,10 +3,11 @@
 ## B leaves just before A (coord): new view must be {C,D}, with C being the coord
 ## https://issues.jboss.org/browse/JGRP-2293
 
-RULE CreateRendezvous
-CLASS org.jgroups.JChannel
-METHOD disconnect
+RULE bla
+HELPER org.jgroups.tests.helpers.LeaveTestHelper
+CLASS org.jgroups.protocols.pbcast.GMS
+METHOD process
 AT ENTRY
 IF TRUE
-    DO System.out.println("**** disconnecting " + $0.getAddress());
+    DO processRequests($1);
 ENDRULE

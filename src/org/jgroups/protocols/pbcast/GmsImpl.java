@@ -17,7 +17,6 @@ public abstract class GmsImpl {
     protected final GMS    gms;
     protected final Merger merger;
     protected final Log    log;
-    volatile boolean       leaving=false;
 
 
     protected GmsImpl(GMS gms) {
@@ -47,9 +46,9 @@ public abstract class GmsImpl {
     public void            handleMembershipChange(Collection<Request> requests)  {}
     public void            handleViewChange(View new_view, Digest digest)        {}
 
-    public void            init() throws Exception {leaving=false;}
-    public void            start() throws Exception {leaving=false;}
-    public void            stop() {leaving=true;}
+    public void            init()  throws Exception {gms.setLeaving(false);}
+    public void            start() throws Exception {gms.setLeaving(false);}
+    public void            stop()                   {gms.setLeaving(true);}
 
 
 

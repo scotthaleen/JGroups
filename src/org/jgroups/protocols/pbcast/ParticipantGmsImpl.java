@@ -113,7 +113,7 @@ public class ParticipantGmsImpl extends ServerGmsImpl {
      */
     public void handleViewChange(View new_view, Digest digest) {
         suspected_mbrs.clear();
-        if(leaving && !new_view.containsMember(gms.local_addr)) // received a view in which I'm not member: ignore
+        if(gms.isLeaving() && !new_view.containsMember(gms.local_addr)) // received a view in which I'm not member: ignore
             return;
         gms.installView(new_view, digest);
     }
