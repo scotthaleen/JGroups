@@ -29,9 +29,10 @@ public abstract class GmsImpl {
     public abstract void   joinWithStateTransfer(Address local_addr,boolean useFlushIfPresent);
     
     public abstract void   leave(Address mbr);
+    public void            handleCoordLeave(Address mbr)        {wrongMethod("handleCoordLeave");}
 
     public void            handleJoinResponse(JoinRsp join_rsp) {}
-    public void            handleLeaveResponse() {}
+    public void            handleLeaveResponse(Address sender)  {gms.getLeavePromise().setResult(sender);}
 
     public void            suspect(Address mbr)   {}
     public void            unsuspect(Address mbr) {}
@@ -72,11 +73,13 @@ public abstract class GmsImpl {
 
 
     public static class Request {
-        public static final int JOIN    = 1;
-        public static final int LEAVE   = 2;
-        public static final int SUSPECT = 3;
-        public static final int MERGE   = 4;
-        public static final int JOIN_WITH_STATE_TRANSFER    = 6;
+        public static final int JOIN                     = 1;
+        public static final int LEAVE                    = 2;
+        public static final int COORD_LEAVE              = 3;
+        public static final int SUSPECT                  = 4;
+        public static final int MERGE                    = 5;
+        public static final int JOIN_WITH_STATE_TRANSFER = 6;
+
 
 
         protected int               type=-1;
@@ -110,6 +113,7 @@ public abstract class GmsImpl {
                 case JOIN:
                 case JOIN_WITH_STATE_TRANSFER:
                 case LEAVE:
+                case COORD_LEAVE:
                 case SUSPECT:
                     return Objects.equals(mbr, other.mbr);
                 case MERGE:
@@ -125,12 +129,13 @@ public abstract class GmsImpl {
 
         public String toString() {
             switch(type) {
-                case JOIN:                     return "JOIN(" + mbr + ")";
-                case JOIN_WITH_STATE_TRANSFER: return "JOIN_WITH_STATE_TRANSFER(" + mbr + ")";
-                case LEAVE:                    return "LEAVE(" + mbr + ")";
-                case SUSPECT:                  return "SUSPECT(" + mbr + ")";
-                case MERGE:                    return "MERGE(" + views.size() + " views)";
-                default:                       return "<invalid (type=" + type + ")";
+                case JOIN:                     return String.format("JOIN(%s)", mbr);
+                case JOIN_WITH_STATE_TRANSFER: return String.format("JOIN_WITH_STATE_TRANSFER(%s)", mbr);
+                case LEAVE:                    return String.format("LEAVE(%s)", mbr);
+                case COORD_LEAVE:              return String.format("COORD_LEAVE(%s)", mbr);
+                case SUSPECT:                  return String.format("SUSPECT(%s)", mbr);
+                case MERGE:                    return String.format("MERGE(%d views)", views.size());
+                default:                       return String.format("<invalid (type=%d)", type);
             }
         }
 

@@ -24,12 +24,23 @@ IF TRUE
       deleteRendezvous("rv", 2);
 ENDRULE
 
+
+RULE Process requests
+CLASS org.jgroups.protocols.pbcast.GMS
+METHOD process
+BIND reqs=$1
+AT ENTRY
+IF true
+   DO System.out.println("-- reqs: " +  reqs);
+ENDRULE
+
 RULE Print contents of requests on ViewHandler.add()
 HELPER org.jgroups.tests.helpers.LeaveTestHelper
 CLASS org.jgroups.protocols.pbcast.ViewHandler
 METHOD add(Object)
 BIND req:org.jgroups.protocols.pbcast.GmsImpl$Request=$1;
 AT ENTRY
-IF req.getType() == Request.LEAVE
+IF req.getType() == org.jgroups.protocols.pbcast.GmsImpl$Request.LEAVE
     DO System.out.println("*** " +$0.gms.getLocalAddress()+": adding request " + req + ", class: " + req.getClass());
+       add
 ENDRULE

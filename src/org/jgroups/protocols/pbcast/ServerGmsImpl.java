@@ -8,6 +8,7 @@ import org.jgroups.util.MergeId;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Common super class for CoordGmsImpl and ParticipantGmsImpl
@@ -65,25 +66,36 @@ public abstract class ServerGmsImpl extends GmsImpl {
         merger.handleDigestResponse(sender, digest);
     }
 
-    public void handleLeaveResponse() {
-        gms.getLeavePromise().setResult(true);  // unblocks thread waiting in leave()
-    }
 
     /**
      * Sends a leave request to coord and blocks until a leave response has been received, or the leave timeout has elapsed
      */
-    protected void sendLeaveReqTo(Address coord) {
-        gms.getLeavePromise().reset();
+    protected boolean sendLeaveReqToCoord(final Address coord) {
+        if(coord == null) {
+            log.warn("%s: cannot send LEAVE request to coord (null)", gms.getLocalAddress());
+            return false;
+        }
+
+        System.out.printf("**** %s (%s): sending LEAVE to %s\n",
+                          gms.getLocalAddress(), gms.getImplementation(), coord);
+
+        gms.getLeavePromise().reset(coord);
         gms.setLeaving(true);
         log.trace("%s: sending LEAVE request to %s", gms.local_addr, coord);
         long start=System.currentTimeMillis();
         sendLeaveMessage(coord, gms.local_addr);
-        Boolean result=gms.getLeavePromise().getResult(gms.leave_timeout);
-        long time=System.currentTimeMillis()-start;
-        if(result != null)
+        Address sender=gms.getLeavePromise().getResult(gms.leave_timeout);
+        long time=System.currentTimeMillis() - start;
+        if(!Objects.equals(coord, gms.getLeavePromise().getExpectedResult()))
+            return false;
+
+        System.out.printf("**** %s (%s): got LEAVE-RSP from %s in %d ms\n",
+                          gms.getLocalAddress(), gms.getImplementation(), sender, time);
+        if(sender != null)
             log.trace("%s: got LEAVE response from %s in %d ms", gms.local_addr, coord, time);
         else
             log.trace("%s: timed out waiting for LEAVE response from %s (after %d ms)", gms.local_addr, coord, time);
+        return true;
     }
 
     protected void sendLeaveMessage(Address coord, Address mbr) {

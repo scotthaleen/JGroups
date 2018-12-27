@@ -51,7 +51,7 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
     protected long join_timeout=3000;
 
     @Property(description="Leave timeout")
-    protected long leave_timeout=1000;
+    protected long leave_timeout=3000;
 
     @Property(description="Timeout (in ms) to complete merge")
     protected long merge_timeout=5000; // time to wait for all MERGE_RSPS
@@ -146,8 +146,8 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
     /** Members excluded from group, but for which no view has been received yet */
     protected final List<Address>       leaving=new ArrayList<>(7);
 
-    /** To block for the LEAVE-RSP when sending a LEAVE-REQ */
-    protected final Promise<Boolean>    leave_promise=new Promise<>();
+    /** To block for the LEAVE-RSP when sending a LEAVE-REQ. The address is the sender of the LEAVE-RSP */
+    protected final MatchingPromise<Address>    leave_promise=new MatchingPromise<>(null);
 
     /** Keeps track of old members (up to num_prev_mbrs) */
     protected BoundedList<Address>      prev_members;
@@ -201,6 +201,7 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
     public long getJoinTimeout() {return join_timeout;}
     public void setJoinTimeout(long t) {join_timeout=t;}
     public GMS joinTimeout(long timeout) {this.join_timeout=timeout; return this;}
+    public GMS leaveTimeout(long timeout) {this.leave_timeout=timeout; return this;}
     public long getMergeTimeout() {return merge_timeout;}
     public void setMergeTimeout(long timeout) {merge_timeout=timeout;}
     public long getMaxJoinAttempts() {return max_join_attempts;}
@@ -208,7 +209,7 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
 
     @ManagedAttribute(description="impl")
     public String getImplementation() {
-        return impl == null? "n/a" : impl.getClass().getSimpleName();
+        return impl == null? "null" : impl.getClass().getSimpleName();
     }
 
     @ManagedAttribute(description="Whether or not the current instance is the coordinator")
@@ -216,9 +217,9 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
         return impl instanceof CoordGmsImpl;
     }
 
-    public boolean          isLeaving()              {return is_leaving;}
-    public GMS              setLeaving(boolean flag) {this.is_leaving=flag; return this;}
-    public Promise<Boolean> getLeavePromise()        {return leave_promise;}
+    public boolean          isLeaving()               {return is_leaving;}
+    public GMS              setLeaving(boolean flag)  {this.is_leaving=flag; return this;}
+    public MatchingPromise<Address> getLeavePromise() {return leave_promise;}
 
     public MembershipChangePolicy getMembershipChangePolicy() {
         return membership_change_policy;
@@ -275,6 +276,12 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
             throw new IllegalArgumentException("view_ack_collection_timeout has to be greater than 0");
         this.view_ack_collection_timeout=view_ack_collection_timeout;
     }
+    public GMS viewAckCollectionTimeout(long view_ack_collection_timeout) {
+        if(view_ack_collection_timeout <= 0)
+            throw new IllegalArgumentException("view_ack_collection_timeout has to be greater than 0");
+        this.view_ack_collection_timeout=view_ack_collection_timeout;
+        return this;
+    }
 
     @Deprecated
     public boolean isViewBundling() {return true;}
@@ -305,7 +312,7 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
     @ManagedOperation public void resumeViewHandler() {view_handler.resume();}
 
 
-    protected ViewHandler getViewHandler() {return view_handler;}
+    public ViewHandler getViewHandler() {return view_handler;}
 
     @ManagedOperation
     public String printPreviousViews() {
@@ -897,7 +904,7 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
                 view_handler.add(new Request(Request.LEAVE, hdr.mbr));
                 break;
             case GmsHeader.LEAVE_RSP:
-                impl.handleLeaveResponse();
+                impl.handleLeaveResponse(msg.getSrc());
                 break;
             case GmsHeader.VIEW:
                 Tuple<View,Digest> tuple=readViewAndDigest(msg.getRawBuffer(), msg.getOffset(), msg.getLength());
@@ -1129,6 +1136,10 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
     /* ------------------------------- Private Methods --------------------------------- */
 
     final void initState() {
+
+        if(local_addr != null && impl != null)
+            System.out.printf("==== %s (%s): changing state to Client\n", local_addr, getImplementation());
+
         becomeClient();
         view=null;
         first_view_sent=false;
@@ -1312,11 +1323,14 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
             case Request.SUSPECT:
                 impl.handleMembershipChange(requests);
                 break;
+            case Request.COORD_LEAVE:
+                impl.handleCoordLeave(firstReq.mbr);
+                break;
             case Request.MERGE:
                 impl.merge(firstReq.views);
                 break;
             default:
-                log.error("request " + firstReq.type + " is unknown; discarded");
+                log.error("request type " + firstReq.type + " is unknown; discarded");
         }
     }
 

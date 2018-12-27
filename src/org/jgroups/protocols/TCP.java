@@ -104,7 +104,7 @@ public class TCP extends BasicTCP {
     }
     
     public void stop() {
-        if(log.isDebugEnabled()) log.debug("closing sockets and stopping threads");
+        if(log.isDebugEnabled()) log.debug("%s: closing sockets and stopping threads", local_addr);
         server.stop(); //not needed, but just in case
         super.stop();
     }

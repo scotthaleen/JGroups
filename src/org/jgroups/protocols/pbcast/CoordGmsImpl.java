@@ -32,6 +32,7 @@ public class CoordGmsImpl extends ServerGmsImpl {
     public void init() throws Exception {
         super.init();
         merger.cancelMerge(null);
+        gms.getViewHandler().resume();
     }
 
     public void join(Address mbr,boolean useFlushIfPresent) {
@@ -48,19 +49,33 @@ public class CoordGmsImpl extends ServerGmsImpl {
             if(log.isErrorEnabled()) log.error(Util.getMessage("MemberSAddressIsNull"));
             return;
         }
-        gms.setLeaving(true);
-        Address next_coord=gms.determineNextCoordinator();
-        if(next_coord != null)
-            sendLeaveReqTo(next_coord);
-        else {
-            gms.getViewHandler().add(new Request(Request.LEAVE, mbr));
+        try {
+            ViewHandler<Request> vh=gms.getViewHandler();
+
+           // System.out.printf("**** %s (%s): leave(%s): adding COORD_LEAVE to view handler:\n",
+             //                 gms.getLocalAddress(), gms.getImplementation(), mbr);
+
+            // Util.sleep(100);
+
+            // https://issues.jboss.org/browse/JGRP-2293
+            vh.add(new Request(Request.COORD_LEAVE, mbr));
+
             // If we're the coord leaving, ignore gms.leave_timeout: https://issues.jboss.org/browse/JGRP-1509
             long timeout=(long)(Math.max(gms.leave_timeout, gms.view_ack_collection_timeout) * 1.10);
-            gms.getViewHandler().waitUntilComplete(timeout);
+            vh.waitUntilComplete(timeout);
         }
-        gms.becomeClient();
+        finally {
+            gms.initState(); // prepare for the next JOIN
+        }
     }
 
+    public void handleCoordLeave(Address mbr) {
+        gms.setLeaving(true);
+        gms.suspendViewHandler(); // clears the queue and drops subsequent requests
+        Address next_coord=gms.determineNextCoordinator();
+        if(next_coord != null && sendLeaveReqToCoord(next_coord))
+            gms.initState();
+    }
 
     public void suspect(Address mbr) {
         if(mbr.equals(gms.local_addr)) {
@@ -90,8 +105,10 @@ public class CoordGmsImpl extends ServerGmsImpl {
         Collection<Address> suspected_mbrs=new LinkedHashSet<>(requests.size());
         Collection<Address> leaving_mbrs=new LinkedHashSet<>(requests.size());
 
-        boolean self_leaving=false; // is the coord leaving
 
+        System.out.printf("**** %s (%s): handleMembershipChange(%s)\n", gms.getLocalAddress(), gms.getImplementation(), requests);
+
+        boolean self_leaving=false; // is the coord leaving
         for(Request req: requests) {
             switch(req.type) {
                 case Request.JOIN:
