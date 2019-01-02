@@ -901,7 +901,10 @@ public class GMS extends Protocol implements DiagnosticsHandler.ProbeHandler {
             case GmsHeader.LEAVE_REQ:
                 if(hdr.mbr == null)
                     return null;
-                view_handler.add(new Request(Request.LEAVE, hdr.mbr));
+                boolean processed=view_handler.add(new Request(Request.LEAVE, hdr.mbr));
+                System.out.printf("**** %s (%s) [%s]: LEAVE-REQ(%s): processed=%b\n",
+                                  local_addr, getImplementation(), Thread.currentThread(), hdr.mbr,
+                                  processed);
                 break;
             case GmsHeader.LEAVE_RSP:
                 impl.handleLeaveResponse(msg.getSrc());

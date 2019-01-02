@@ -76,8 +76,8 @@ public abstract class ServerGmsImpl extends GmsImpl {
             return false;
         }
 
-        System.out.printf("**** %s (%s): sending LEAVE to %s\n",
-                          gms.getLocalAddress(), gms.getImplementation(), coord);
+        System.out.printf("**** %s (%s) [%s]: sending LEAVE to %s\n",
+                          gms.getLocalAddress(), gms.getImplementation(), Thread.currentThread(), coord);
 
         gms.getLeavePromise().reset(coord);
         gms.setLeaving(true);

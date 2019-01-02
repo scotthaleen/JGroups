@@ -196,9 +196,6 @@ public class LeaveTest /*extends BMNGRunner */ {
         // queue LEAVE and COORD_LEAVE until both have been received, deliver in predefined order
         public void accept(Collection<GmsImpl.Request> requests) {
             if(pass_through) {
-
-                System.out.printf("-- passing through %s\n", requests);
-
                 old_processor.accept(requests);
                 return;
             }

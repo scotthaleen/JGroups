@@ -266,6 +266,30 @@ public class ViewHandlerTest {
         assert view_handler.size() == 0;
     }
 
+    public void testWaitUntilComplete2() {
+        req_handler=list -> {
+            System.out.printf("[%s] list: %s\n", Thread.currentThread(), list);
+            if(list.iterator().next().equals(1)) {
+                System.out.printf("%s: sleeping for 5 seconds\n", Thread.currentThread());
+                Util.sleep(5000);
+            }
+            else
+                System.out.printf("%s: *not* sleeping\n", Thread.currentThread());
+        };
+
+        Thread slow=new Thread(() -> view_handler.add(Collections.singletonList(1)), "slow");
+        slow.start();
+        Util.sleep(1000);
+        view_handler.add(Collections.singletonList(2));
+
+        System.out.println("view_handler = " + view_handler);
+        long start=System.currentTimeMillis();
+        view_handler.waitUntilComplete(10_000);
+        long time=System.currentTimeMillis()-start;
+        System.out.printf("Took %d ms to wait until VH was empty\n", time);
+        assert time >= 4000;
+    }
+
     public void testCoordLeave() {
         final AtomicBoolean result=new AtomicBoolean(true);
         Consumer<Collection<GmsImpl.Request>> req_processor=l -> {

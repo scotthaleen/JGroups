@@ -49,6 +49,10 @@ public class CoordGmsImpl extends ServerGmsImpl {
             if(log.isErrorEnabled()) log.error(Util.getMessage("MemberSAddressIsNull"));
             return;
         }
+
+        System.out.printf("**** %s (%s) [%s] calling leave()\n",
+                          gms.getLocalAddress(), gms.getImplementation(), Thread.currentThread());
+
         try {
             ViewHandler<Request> vh=gms.getViewHandler();
 
@@ -58,7 +62,10 @@ public class CoordGmsImpl extends ServerGmsImpl {
             // Util.sleep(100);
 
             // https://issues.jboss.org/browse/JGRP-2293
-            vh.add(new Request(Request.COORD_LEAVE, mbr));
+            boolean processed=vh.add(new Request(Request.COORD_LEAVE, mbr));
+            System.out.printf("**** %s (%s) [%s] processed=%b\n",
+                              gms.getLocalAddress(), gms.getImplementation(), Thread.currentThread(),
+                              processed);
 
             // If we're the coord leaving, ignore gms.leave_timeout: https://issues.jboss.org/browse/JGRP-1509
             long timeout=(long)(Math.max(gms.leave_timeout, gms.view_ack_collection_timeout) * 1.10);

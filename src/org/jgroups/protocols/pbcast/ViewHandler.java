@@ -161,9 +161,6 @@ public class ViewHandler<R> {
 
     protected boolean _add(R req) {
         if(req == null || suspended.get()) {
-
-            System.err.printf("%s: queue is suspended; request %s is discarded", gms.getLocalAddress(), req);
-
             log().trace("%s: queue is suspended; request %s is discarded", gms.getLocalAddress(), req);
             return false;
         }
@@ -186,9 +183,6 @@ public class ViewHandler<R> {
     @SuppressWarnings("unchecked")
     protected boolean _add(R ... reqs) {
         if(reqs == null || reqs.length == 0 || suspended.get()) {
-
-            System.err.printf("%s: queue is suspended; request %s is discarded", gms.getLocalAddress(), Arrays.toString(reqs));
-
             log().trace("%s: queue is suspended; requests are discarded", gms.getLocalAddress());
             return false;
         }
@@ -212,9 +206,6 @@ public class ViewHandler<R> {
 
     protected boolean _add(Collection<R> reqs) {
         if(reqs == null || reqs.isEmpty() || suspended.get()) {
-
-            System.err.printf("%s: queue is suspended; request %s is discarded", gms.getLocalAddress(), reqs.toString());
-
             log().trace("%s: queue is suspended; requests are discarded", gms.getLocalAddress());
             return false;
         }
@@ -237,7 +228,7 @@ public class ViewHandler<R> {
 
     /** We're guaranteed that only one thread will be called with this method at any time */
     protected void process(Collection<R> requests) {
-        System.out.printf("**** %s [%s]: processing requests: %s\n", gms.local_addr, Thread.currentThread(), requests);
+        // System.out.printf("**** %s [%s]: processing requests: %s\n", gms.local_addr, Thread.currentThread(), requests);
         for(;;) {
             while(!requests.isEmpty()) {
                 removeAndProcess(requests); // remove matching requests and process them
